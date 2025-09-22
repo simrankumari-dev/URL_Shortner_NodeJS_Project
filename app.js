@@ -4,7 +4,8 @@ import { readFile, writeFile} from "fs/promises";
 import crypto from "crypto";
 import path from "path";
 
-const PORT = 3002;
+const PORT = process.env.PORT|| 3000;
+
 
 
 
@@ -21,10 +22,21 @@ const serveFile = async (res, filePath, contentType) => {
 //function of getting duplicate data.
 const DATA_FILE=path.join("data","links.json");
 const loadLinks=async()=>{
+    
+    
     try {
-      const data =await readFile(DATA_FILE,"utf-8");
-      return JSON.parse(data);
-    }catch(error){
+    const data = await readFile(DATA_FILE, "utf-8");
+    // Check if the file is empty
+    if (data.trim() === "") {
+      console.warn("links.json is empty. Initializing with an empty object.");
+      await writeFile(DATA_FILE, JSON.stringify({}));
+      return {};
+    }
+    return JSON.parse(data);
+  }
+    
+    
+    catch(error){
       if(error.code=== "ENOENT"){
         await writeFile(DATA_FILE,JSON.stringify({}))
         return {};
@@ -40,12 +52,33 @@ const loadLinks=async()=>{
 
 //GET: frontend se user koi request bhejta hai to usko handle krna hota hai 
 const server =   createServer(async (req, res) => {
+
   if (req.method === "GET") {
     if (req.url === "/") {
       return serveFile(res, path.join("public", "index.html"), "text/html");
     } else if (req.url === "/style.css") {
       return serveFile(res, path.join("public", "style.css"), "text/css");
     }
+    else if(req.url==="/links"){
+        const links = await loadLinks();
+
+        res.writeHead(200,{"Content-Type": "application/json"});
+        return res.end(JSON.stringify(links));
+    }else{
+        const links=await loadLinks();
+        const shortCode=req.url.slice(1);
+        console.log("links red",req.url);
+        if(links[shortCode]){
+            res.writeHead(302,{location:links[shortCode]});
+            return res.end();
+        }
+
+    }
+    res.writeHead(404,{"Content-Type":"text/plain"});
+    return res.end("Shortened URL is not found");
+
+
+  
   }
 
 
@@ -54,6 +87,7 @@ const server =   createServer(async (req, res) => {
 
 //POST :frontend se data aayega to usko handle krna hai
 if(req.method==="POST"&&req.url==="/shorten"){
+  console.log("POST received");
   //checking dulicate data
   const links = await loadLinks();
 

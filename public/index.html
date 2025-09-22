@@ -18,17 +18,41 @@
                 <button type="submit">Shorten</button>
             </form>
             <h2>Shortened URLs</h2>
-            <ul id="shortened-urls"></ul>
+            <ul id="shortend-urls"></ul>
         </div>
         <script>
+
+            //Displaying data on the form 
+            const fetchShortendURL=async()=>{
+                const response = await fetch("/links");
+                const links=await response.json();
+                console.log("links",links);
+
+                const list = document.getElementById("shortend-urls");
+                list.innerHTML = "";
+
+                for(const[shortCodeurl,url] of Object.entries(links)){
+                    const li = document.createElement('li');
+                    const trancatedURL=url.length>=30?`${url.slice(0,30)}...`:url;
+                    li.innerHTML=`<a href="/${shortCode}" target="_blank">${window.location.origin}/${shortCodeurl}</a>-${trancatedURL}`
+                    list.appendChild(li);
+                    
+
+                }
+
+                }
+
+
             document.getElementById('shorten-form').addEventListener('submit', async (event)=>{
                 event.preventDefault();
 
                 const formData = new FormData(event.target);
+
                 const url=formData.get("url");
+
                 const shortCode=formData.get("shortCode");
         
-                
+                  
 
                 try{
                     const response=await fetch("/shorten",{
@@ -37,10 +61,13 @@
                         body:JSON.stringify({url,shortCode})
                     });
                     if(response.ok){
+                        fetchShortendURL();
                         alert("Form submitted successfull");
+                        event.target.reset();
                     }
                     else{
                         const errorMessage=await response.text();
+                        alert(errorMessage);
 
                     }
 
@@ -50,9 +77,9 @@
 
                 }
 
-
-
             });
+            fetchShortendURL();
+
         </script>
     </body>
     </html>
